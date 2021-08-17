@@ -1,0 +1,5 @@
+Requirements:
+ * terraform 0.12+
+ * ansible
+ * jq
+ * a set of active personal aws credentials

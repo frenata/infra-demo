@@ -1,0 +1,76 @@
+- name: install application
+  hosts: tag_project_sample
+
+  tasks:
+   - name: untar
+     become: true
+     unarchive:
+       src: https://golang.org/dl/go1.15.7.linux-amd64.tar.gz
+       dest: /usr/local
+       remote_src: yes
+
+   - name: update path
+     become: true
+     copy:
+       dest: /etc/profile.d/go-path.sh
+       content: 'PATH=$PATH:/usr/local/go/bin'
+
+   - name: clone gogs
+     git:
+       repo: https://github.com/gogs/gogs.git
+       depth: 1
+       force: yes
+       dest: ~/gogs
+
+   - name: install cc
+     become: true
+     apt:
+       name: gcc
+       state: present
+
+   - name: mkdir
+     file: path=~/gogs/custom/conf state=directory recurse=yes
+
+   - name: custom port
+     copy:
+       dest: ~/gogs/custom/conf/app.ini
+       src: files/app.ini
+
+   - name: build gogs
+     shell: /usr/local/go/bin/go build -o gogs
+     args:
+        chdir: ~/gogs
+
+   - name: cleanup gogs
+     become: true
+     ignore_errors: true
+     shell: killall gogs
+
+   - name: run gogs
+     shell: nohup ./gogs web > gogs.log &
+     async: 60
+     poll: 0
+     args:
+        chdir: ~/gogs
+
+   - name: install nginx
+     become: true
+     import_role:
+       name: ansible-role-nginx
+     vars:
+       nginx_main_template_enable: true
+       nginx_cleanup_config: true
+
+   - name: configure nginx
+     become: true
+     copy:
+       src: files/http.conf
+       dest: /etc/nginx/conf.d/default.conf
+
+   - name: restart nginx
+     become: true
+     systemd:
+       name: "nginx.service"
+       state: restarted
+       daemon-reload: yes
+       enabled: yes
