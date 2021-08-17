@@ -27,6 +27,7 @@
      apt:
        name: gcc
        state: present
+       update_cache: yes
 
    - name: mkdir
      file: path=~/gogs/custom/conf state=directory recurse=yes
@@ -60,6 +61,12 @@
      vars:
        nginx_main_template_enable: true
        nginx_cleanup_config: true
+
+   - name: Creates directory
+     become: true
+     file:
+       path: /etc/nginx/conf.d
+       state: directory
 
    - name: configure nginx
      become: true
